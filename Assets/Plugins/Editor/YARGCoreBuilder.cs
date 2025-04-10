@@ -433,6 +433,9 @@ namespace Editor
 
         private static StreamReader RunCommand(string command, string args, string progMsg, string progInfo, float progress)
         {
+            // TEMP PATCH on MacOS to be able to run dotnet
+            if (command == "dotnet") command = "/usr/local/share/dotnet/dotnet";
+
             // Run the command
             using var process = Process.Start(new ProcessStartInfo()
             {
