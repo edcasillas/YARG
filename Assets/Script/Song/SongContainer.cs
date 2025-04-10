@@ -124,6 +124,8 @@ namespace YARG.Song
                 directories.Add(setlistPath);
             }
 
+            YargLogger.LogInfo($"Scanning songs from {string.Join(";", directories)}");
+
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             var task = UniTask.RunOnThreadPool(() =>
             {
@@ -322,7 +324,7 @@ namespace YARG.Song
         private static void FillContainers()
         {
             _songs = SetAllSongs(_songCache.Entries);
-        
+
             _sortArtists   = Convert(_songCache.Artists, SongAttribute.Artist, true);
             _sortAlbums    = Convert(_songCache.Albums, SongAttribute.Album, true);
             _sortGenres    = Convert(_songCache.Genres, SongAttribute.Genre, false);
@@ -388,7 +390,7 @@ namespace YARG.Song
             static SongCategory[] Convert(SortedDictionary<SortString, List<SongEntry>> list, SongAttribute attribute, bool createCategoryGroups)
             {
                 var sections = new SongCategory[list.Count];
-                
+
                 int index = 0;
                 foreach (var node in list)
                 {
