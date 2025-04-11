@@ -96,10 +96,7 @@ namespace YARG.Menu.Persistent
             };
         }
 
-        public void SetShowing(Stat stat, bool active)
-        {
-            GetStat(stat).SetActive(active);
-        }
+        public void SetShowing(Stat stat, bool active) => GetStat(stat).SetActive(active);
 
         public bool IsShowing(Stat stat)
         {
@@ -112,7 +109,7 @@ namespace YARG.Menu.Persistent
 
             // Wait for next update period
             if (Time.unscaledTime < _nextUpdateTime) return;
-
+/*
             // Check if battery is discharging and we get a valid level.
             var showBattery = SettingsManager.Settings.ShowBattery.Value
                 && SystemInfo.batteryStatus == BatteryStatus.Discharging
@@ -123,7 +120,7 @@ namespace YARG.Menu.Persistent
             UpdateMemoryStats();
             UpdateTime();
             UpdateBattery();
-
+*/
             // Reset the update time
             _nextUpdateTime = Time.unscaledTime + _updateRate;
         }
