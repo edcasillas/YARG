@@ -16,11 +16,14 @@ PluginImporter:
     second:
       enabled: 0
       settings:
+        Exclude Android: 1
         Exclude Editor: 1
         Exclude Linux64: 0
         Exclude OSXUniversal: 0
+        Exclude WebGL: 0
         Exclude Win: 0
         Exclude Win64: 1
+        Exclude iOS: 0
   - first:
       Any: 
     second:
@@ -58,6 +61,16 @@ PluginImporter:
       enabled: 0
       settings:
         CPU: None
+  - first:
+      WebGL: WebGL
+    second:
+      enabled: 1
+      settings: {}
+  - first:
+      iPhone: iOS
+    second:
+      enabled: 1
+      settings: {}
   userData: 
   assetBundleName: 
   assetBundleVariant: 
