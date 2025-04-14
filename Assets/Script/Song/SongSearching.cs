@@ -1,9 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using YARG.Core;
 using YARG.Core.Logging;
 using YARG.Core.Song;
+using YARG.Core.Utility;
 using YARG.Helpers.Extensions;
 using YARG.Player;
 using YARG.Settings;
@@ -179,7 +181,7 @@ namespace YARG.Song
                 if (argument.StartsWith("artist:"))
                 {
                     attribute = SortAttribute.Artist;
-                    argument = SortString.RemoveDiacritics(argument[7..]);
+                    argument = StringTransformations.RemoveDiacritics(argument[7..]);
                 }
                 else if (argument.StartsWith("source:"))
                 {
@@ -189,7 +191,7 @@ namespace YARG.Song
                 else if (argument.StartsWith("album:"))
                 {
                     attribute = SortAttribute.Album;
-                    argument = SortString.RemoveDiacritics(argument[6..]);
+                    argument = StringTransformations.RemoveDiacritics(argument[6..]);
                 }
                 else if (argument.StartsWith("charter:"))
                 {
@@ -214,12 +216,12 @@ namespace YARG.Song
                 else if (argument.StartsWith("name:"))
                 {
                     attribute = SortAttribute.Name;
-                    argument = SortString.RemoveDiacritics(argument[5..]);
+                    argument = StringTransformations.RemoveDiacritics(argument[5..]);
                 }
                 else if (argument.StartsWith("title:"))
                 {
                     attribute = SortAttribute.Name;
-                    argument = SortString.RemoveDiacritics(argument[6..]);
+                    argument = StringTransformations.RemoveDiacritics(argument[6..]);
                 }
                 else
                 {
@@ -232,7 +234,7 @@ namespace YARG.Song
                     else
                     {
                         attribute = SortAttribute.Unspecified;
-                        argument = SortString.RemoveDiacritics(argument);
+                        argument = StringTransformations.RemoveDiacritics(argument);
                     }
                 }
 
@@ -308,7 +310,7 @@ namespace YARG.Song
                     SortAttribute.Artist => entry => IsAboveFuzzyThreshold(entry.Artist.SearchStr, filter.Argument),
                     SortAttribute.Album => entry => IsAboveFuzzyThreshold(entry.Album.SearchStr, filter.Argument),
                     SortAttribute.Genre => entry => IsAboveFuzzyThreshold(entry.Genre.SearchStr, filter.Argument),
-                    SortAttribute.Year => entry => entry.Year.Contains(filter.Argument) || entry.UnmodifiedYear.Contains(filter.Argument),
+                    SortAttribute.Year => entry => entry.UnmodifiedYear.Contains(filter.Argument),
                     SortAttribute.Charter => entry => IsAboveFuzzyThreshold(entry.Charter.SearchStr, filter.Argument),
                     SortAttribute.Playlist => entry => IsAboveFuzzyThreshold(entry.Playlist.SearchStr, filter.Argument),
                     SortAttribute.Source => entry => IsAboveFuzzyThreshold(entry.Source.SearchStr, filter.Argument),
@@ -320,7 +322,7 @@ namespace YARG.Song
                     SortAttribute.Artist => entry => entry.Artist.SearchStr == filter.Argument,
                     SortAttribute.Album => entry => entry.Album.SearchStr == filter.Argument,
                     SortAttribute.Genre => entry => entry.Genre.SearchStr == filter.Argument,
-                    SortAttribute.Year => entry => entry.Year == filter.Argument || entry.UnmodifiedYear == filter.Argument,
+                    SortAttribute.Year => entry => entry.ParsedYear == filter.Argument || entry.UnmodifiedYear == filter.Argument,
                     SortAttribute.Charter => entry => entry.Charter.SearchStr == filter.Argument,
                     SortAttribute.Playlist => entry => entry.Playlist.SearchStr == filter.Argument,
                     SortAttribute.Source => entry => entry.Source.SearchStr == filter.Argument,
@@ -408,7 +410,7 @@ namespace YARG.Song
                     {
                         return _nameIndex - other._nameIndex;
                     }
-                    return Song.CompareTo(other.Song);
+                    return SongEntrySorting.MetadataComparer.Instance.Compare(Song, other.Song);
                 }
 
                 // this.ArtistIndex guaranteed valid from this point
@@ -423,13 +425,14 @@ namespace YARG.Song
                     return _artistIndex - other._artistIndex;
                 }
 
+                // Flips the order, comparing Artist first instead of Name
                 int strCmp;
                 if ((strCmp = Song.Artist.CompareTo(other.Song.Artist)) == 0 &&
                     (strCmp = Song.Name.CompareTo(other.Song.Name)) == 0 &&
                     (strCmp = Song.Album.CompareTo(other.Song.Album)) == 0 &&
                     (strCmp = Song.Charter.CompareTo(other.Song.Charter)) == 0)
                 {
-                    strCmp = Song.Directory.CompareTo(other.Song.Directory);
+                    strCmp = Song.SortBasedLocation.CompareTo(other.Song.SortBasedLocation);
                 }
                 return strCmp;
             }
@@ -451,17 +454,20 @@ namespace YARG.Song
         private static SongEntry[] UnspecifiedSearch(FilterNode filter, List<SongEntry> songs)
         {
             var nodes = new List<UnspecifiedSortNode>(songs.Count);
-            for (int i = 0; i < songs.Count; ++i)
+            Parallel.ForEach(songs, song =>
             {
-                var node = new UnspecifiedSortNode(songs[i], filter);
+                var node = new UnspecifiedSortNode(song, filter);
                 if (node.Rank >= 0)
                 {
-                    nodes.Insert(~nodes.BinarySearch(node), node);
+                    lock (nodes)
+                    {
+                        nodes.Insert(~nodes.BinarySearch(node), node);
+                    }
                 }
-            }
+            });
 
             var arr = new SongEntry[nodes.Count];
-            for (int i = 0; i < arr.Length; ++i)
+            for (int i = 0; i < nodes.Count; ++i)
             {
                 arr[i] = nodes[i].Song;
             }

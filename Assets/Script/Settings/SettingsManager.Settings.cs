@@ -2,6 +2,7 @@
 using System.Net;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using YARG.Core;
 using YARG.Core.Audio;
 using YARG.Core.Logging;
 using YARG.Gameplay.HUD;
@@ -14,6 +15,7 @@ using YARG.Menu.MusicLibrary;
 using YARG.Menu.Persistent;
 using YARG.Menu.Settings;
 using YARG.Player;
+using YARG.Scores;
 using YARG.Settings.Types;
 using YARG.Song;
 using YARG.Venue;
@@ -38,6 +40,7 @@ namespace YARG.Settings
             public bool ShowExperimentalWarningDialog = true;
 
             public SortAttribute LibrarySort = SortAttribute.Name;
+            public SortAttribute PreviousLibrarySort = SortAttribute.Name;
 
             public Dictionary<string, HUDPositionProfile> HUDPositionProfiles = new();
 
@@ -58,22 +61,32 @@ namespace YARG.Settings
 
             public void OpenVenueFolder()
             {
-                FileExplorerHelper.OpenFolder(VenueLoader.VenueFolder.FullName);
+                FileExplorerHelper.OpenFolder(VenueLoader.VenueFolder);
             }
 
             public ToggleSetting DisableGlobalBackgrounds { get; } = new(false);
             public ToggleSetting DisablePerSongBackgrounds { get; } = new(false);
+            public ToggleSetting WaitForSongVideo { get; } = new(true);
 
-            public ToggleSetting ShowBattery { get; } = new(false);
+
+            public SliderSetting InputPollingFrequency { get; } = new(250f, 60f, 1000f,
+                (value) => InputSystem.pollingFrequency = value
+            );
+            public ToggleSetting VoiceActivatedVocalStarPower { get; } = new(true);
+            public ToggleSetting EnablePracticeSP { get; } = new(false);
+            public SliderSetting PracticeRestartDelay { get; } = new(2f, 0.5f, 5f);
+
+            public ToggleSetting ShowBattery { get; } = new(false, ShowBatteryCallback);
             public ToggleSetting ShowTime { get; } = new(false, ShowTimeCallback);
             public ToggleSetting MemoryStats { get; } = new(false, MemoryStatsCallback);
+            public ToggleSetting ShowActivePlayers { get; } = new(false, ShowActivePlayersCallback);
+            public ToggleSetting ShowActiveBots { get; } = new(false, ShowActiveBotsCallback);
 
             public ToggleSetting ReconnectProfiles { get; } = new(true);
 
-            public ToggleSetting UseCymbalModelsInFiveLane { get; } = new(true);
-            public SliderSetting KickBounceMultiplier { get; } = new(1f, 0f, 2f);
+            public ToggleSetting ReduceNoteSpeedByDifficulty { get; } = new(true);
 
-            public SliderSetting ShowCursorTimer { get; } = new(2f, 0f, 5f);
+            public SliderSetting ShowCursorTimer      { get; } = new(2f, 0f, 5f);
 
             public ToggleSetting PauseOnDeviceDisconnect { get; } = new(true);
             public ToggleSetting PauseOnFocusLoss { get; } = new(true);
@@ -85,10 +98,17 @@ namespace YARG.Settings
 
             #region Songs
 
-            public ToggleSetting AllowDuplicateSongs { get; } = new(true);
+            public ToggleSetting AllowDuplicateSongs { get; } = new(true, _ => MusicLibraryMenu.SetReload(MusicLibraryReloadState.Partial));
             public ToggleSetting UseFullDirectoryForPlaylists { get; } = new(false);
 
             public ToggleSetting ShowFavoriteButton { get; } = new(true);
+
+            public DropdownSetting<DifficultyRingMode> DifficultyRings { get; }
+                = new(DifficultyRingMode.Classic)
+                {
+                    DifficultyRingMode.Classic,
+                    DifficultyRingMode.Expanded,
+                };
 
             public DropdownSetting<HighScoreInfoMode> HighScoreInfo { get; }
                 = new(HighScoreInfoMode.Stars)
@@ -96,6 +116,13 @@ namespace YARG.Settings
                     HighScoreInfoMode.Stars,
                     HighScoreInfoMode.Score,
                     HighScoreInfoMode.Off
+                };
+
+            public DropdownSetting<HighScoreHistoryMode> HighScoreHistory { get; }
+                = new(HighScoreHistoryMode.HighestDifficulty, _ => ScoreContainer.InvalidateScoreCache())
+                {
+                    HighScoreHistoryMode.HighestOverall,
+                    HighScoreHistoryMode.HighestDifficulty,
                 };
 
             #endregion
@@ -131,6 +158,9 @@ namespace YARG.Settings
             public VolumeSetting SfxVolume { get; } =
                 new(0.8f, v => GlobalAudioHandler.SetVolumeSetting(SongStem.Sfx, v));
 
+            public VolumeSetting DrumSfxVolume { get; } =
+                new(0.8f, v => GlobalAudioHandler.SetVolumeSetting(SongStem.DrumSfx, v));
+
             public VolumeSetting PreviewVolume { get; } = new(0.25f);
             public VolumeSetting MusicPlayerVolume { get; } = new(0.15f, MusicPlayerVolumeCallback);
             public VolumeSetting VocalMonitoring { get; } = new(0.7f, VocalMonitoringCallback);
@@ -161,8 +191,12 @@ namespace YARG.Settings
 
             public ToggleSetting OverstrumAndOverhitSoundEffects { get; } = new(true);
 
-            // public ToggleSetting UseWhammyFx            { get; } = new(true, UseWhammyFxChange);
-            // public SliderSetting WhammyPitchShiftAmount { get; } = new(1, 1, 12, WhammyPitchShiftAmountChange);
+            public ToggleSetting AlwaysOnDrumSFX { get; } = new(false);
+
+            public ToggleSetting UseWhammyFx { get; } = new(false, v => GlobalAudioHandler.UseWhammyFx = v);
+
+            public SliderSetting WhammyPitchShiftAmount { get; } = new(1, 1, 5, v => GlobalAudioHandler.WhammyPitchShiftAmount = v);
+
             // public IntSetting    WhammyOversampleFactor { get; } = new(8, 4, 32, WhammyOversampleFactorChange);
             public ToggleSetting UseChipmunkSpeed { get; } = new(false, UseChipmunkSpeedChange);
 
@@ -192,6 +226,7 @@ namespace YARG.Settings
 
             public ToggleSetting LowQuality { get; } = new(false, LowQualityCallback);
             public ToggleSetting DisableBloom { get; } = new(false, DisableBloomCallback);
+            public ToggleSetting DisableFilmGrain { get; } = new(false, DisableFilmGrainCallback);
 
             public DropdownSetting<StarPowerHighwayFxMode> StarPowerHighwayFx { get; }
                 = new(StarPowerHighwayFxMode.On)
@@ -201,9 +236,14 @@ namespace YARG.Settings
                     StarPowerHighwayFxMode.Off
                 };
 
+            public SliderSetting SongBackgroundOpacity { get; } = new(1f, 0f, 1f);
+
+            public ToggleSetting UseCymbalModelsInFiveLane { get; } = new(true);
+            public ToggleSetting UseThreeLaneLyricsInHarmony { get; } = new(true);
+            public SliderSetting KickBounceMultiplier { get; } = new(1f, 0f, 2f);
+
             public ToggleSetting ShowHitWindow { get; } = new(false, ShowHitWindowCallback);
             public ToggleSetting DisableTextNotifications { get; } = new(false);
-            public ToggleSetting EnablePracticeSP { get; } = new(false);
 
             public DropdownSetting<NoteStreakFrequencyMode> NoteStreakFrequency { get; }
                 = new(NoteStreakFrequencyMode.Frequent)
@@ -211,6 +251,25 @@ namespace YARG.Settings
                     NoteStreakFrequencyMode.Frequent,
                     NoteStreakFrequencyMode.Sparse,
                     NoteStreakFrequencyMode.Disabled
+                };
+
+            public DropdownSetting<CountdownDisplayMode> CountdownDisplay { get; }
+                = new(CountdownDisplayMode.Measures)
+                {
+                    CountdownDisplayMode.Measures,
+                    CountdownDisplayMode.Seconds,
+                    CountdownDisplayMode.Disabled
+                };
+
+            public ToggleSetting ShowPlayerNameWhenStartingSong { get; } = new(true);
+
+            public DropdownSetting<LyricDisplayMode> LyricDisplay { get; }
+                = new(LyricDisplayMode.Normal)
+                {
+                    LyricDisplayMode.Normal,
+                    LyricDisplayMode.Transparent,
+                    LyricDisplayMode.NoBackground,
+                    LyricDisplayMode.Disabled
                 };
 
             public DropdownSetting<SongProgressMode> SongTimeOnScoreBox { get; }
@@ -225,15 +284,6 @@ namespace YARG.Settings
                 };
 
             public ToggleSetting GraphicalProgressOnScoreBox { get; } = new(true);
-
-            public DropdownSetting<LyricDisplayMode> LyricDisplay { get; }
-                = new(LyricDisplayMode.Normal)
-                {
-                    LyricDisplayMode.Normal,
-                    LyricDisplayMode.Transparent,
-                    LyricDisplayMode.NoBackground,
-                    LyricDisplayMode.Disabled
-                };
 
             public ToggleSetting KeepSongInfoVisible { get; } = new(false);
 
@@ -343,9 +393,42 @@ namespace YARG.Settings
 
             public ToggleSetting ShowAdvancedMusicLibraryOptions { get; } = new(false);
 
+            public DropdownSetting<LogLevel> MinimumLogLevel { get; } = new(
+#if UNITY_EDITOR
+                LogLevel.Debug,
+#else
+                LogLevel.Info,
+#endif
+                SetLogLevelCallback
+            )
+            {
+                LogLevel.Trace,
+                LogLevel.Debug,
+                LogLevel.Info,
+                LogLevel.Warning,
+                LogLevel.Error,
+                // No real need to distinguish these two,
+                // they're very important to have in logs regardless
+                // LogLevel.Exception,
+                // LogLevel.Failure,
+            };
+
             #endregion
 
             #region Callbacks
+
+            private static void SetLogLevelCallback(LogLevel level)
+            {
+                YargLogger.MinimumLogLevel = level;
+            }
+
+            private static void ShowBatteryCallback(bool value)
+            {
+                // Only show if battery status is reported and has a valid value
+                value &= SystemInfo.batteryStatus != BatteryStatus.Unknown &&
+                    SystemInfo.batteryLevel is >= 0 and <= 1;
+                StatsManager.Instance.SetShowing(StatsManager.Stat.Battery, value);
+            }
 
             private static void ShowTimeCallback(bool value)
             {
@@ -360,6 +443,16 @@ namespace YARG.Settings
 #endif
 
                 StatsManager.Instance.SetShowing(StatsManager.Stat.Memory, value);
+            }
+
+            private static void ShowActivePlayersCallback(bool value)
+            {
+                StatsManager.Instance.SetShowing(StatsManager.Stat.ActivePlayers, value);
+            }
+
+            private static void ShowActiveBotsCallback(bool value)
+            {
+                StatsManager.Instance.SetShowing(StatsManager.Stat.ActiveBots, value);
             }
 
             private static void RB3EEnabledCallback(bool value)
@@ -421,42 +514,8 @@ namespace YARG.Settings
                     return;
                 }
 
-                Resolution resolution;
-
-                // If set to null, just get the "default" resolution.
-                if (value == null)
-                {
-                    // Since we actually can't get the highest resolution,
-                    // we need to find it in the supported resolutions
-                    var highest = new Resolution
-                    {
-                        width = 0, height = 0, refreshRate = 0
-                    };
-
-                    foreach (var r in Screen.resolutions)
-                    {
-                        if (r.refreshRate >= highest.refreshRate ||
-                            r.width >= highest.width ||
-                            r.height >= highest.height)
-                        {
-                            highest = r;
-                        }
-                    }
-
-                    resolution = highest;
-                }
-                else
-                {
-                    resolution = value.Value;
-                }
-
-                var fullscreenMode = FullScreenMode.FullScreenWindow;
-                if (Settings != null)
-                {
-                    fullscreenMode = Settings.FullscreenMode.Value;
-                }
-
-                Screen.SetResolution(resolution.width, resolution.height, fullscreenMode, resolution.refreshRate);
+                var resolution = value ?? ScreenHelper.GetScreenResolution();
+                ScreenHelper.SetResolution(resolution);
 
                 // Make sure to refresh the preview since it'll look stretched if we don't
                 SettingsMenu.Instance.RefreshPreview(true);
@@ -470,6 +529,11 @@ namespace YARG.Settings
             private static void DisableBloomCallback(bool value)
             {
                 GraphicsManager.Instance.BloomEnabled = !value;
+            }
+
+            private static void DisableFilmGrainCallback(bool value)
+            {
+                GraphicsManager.Instance.FilmGrainEnabled = !value;
             }
 
             private static void ShowHitWindowCallback(bool value)
@@ -490,16 +554,6 @@ namespace YARG.Settings
                 HelpBar.Instance.MusicPlayer.UpdateVolume(volume);
             }
 
-            // private static void UseWhammyFxChange(bool value)
-            // {
-            //     AudioManager.UseWhammyFx = value;
-            // }
-
-            // private static void WhammyPitchShiftAmountChange(float value)
-            // {
-            //     AudioManager.WhammyPitchShiftAmount = value;
-            // }
-            //
             // private static void WhammyOversampleFactorChange(int value)
             // {
             //     AudioManager.WhammyOversampleFactor = value;

@@ -24,12 +24,14 @@ namespace YARG.Gameplay.Visuals
 
         protected override void InitializeElement()
         {
-            var color = VocalTrack.Colors[NoteRef.HarmonyPart];
+            var color = Player.VocalTrack.Colors[NoteRef.HarmonyPart];
+            MaterialPropertyInstance.Instance.Clear();
+            MaterialPropertyInstance.Instance.SetColor("_BaseColor", color);
 
             // Set line color
             foreach (var line in _lineRenderers)
             {
-                line.material.color = color;
+                line.SetPropertyBlock(MaterialPropertyInstance.Instance);
             }
 
             YargLogger.Assert(_lineRenderers.Length == _lineWidthMultipliers.Length);
@@ -40,7 +42,7 @@ namespace YARG.Gameplay.Visuals
         {
             // Create points
             _points.Clear();
-            foreach (var note in NoteRef.ChordEnumerator())
+            foreach (var note in NoteRef.AllNotes)
             {
                 var z = VocalTrack.GetPosForPitch(note.Pitch);
 

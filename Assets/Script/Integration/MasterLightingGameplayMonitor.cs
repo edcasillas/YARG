@@ -84,7 +84,7 @@ namespace YARG.Integration
                     int fretsPressed = 0;
 
                     // Use ChordEnumerator to iterate over the notes
-                    foreach (var note in _keys.Notes[_keysIndex].ChordEnumerator())
+                    foreach (var note in _keys.Notes[_keysIndex].AllNotes)
                     {
                         fretsPressed += 1 << note.Fret;
                     }
@@ -111,7 +111,7 @@ namespace YARG.Integration
                 {
                     int fretsPressed = 0;
 
-                    foreach (var note in _bass.Notes[_bassIndex].ChordEnumerator())
+                    foreach (var note in _bass.Notes[_bassIndex].AllNotes)
                     {
                         fretsPressed += 1 << note.Fret;
                     }
@@ -138,7 +138,7 @@ namespace YARG.Integration
                 {
                     int fretsPressed = 0;
 
-                    foreach (var note in _guitar.Notes[_guitarIndex].ChordEnumerator())
+                    foreach (var note in _guitar.Notes[_guitarIndex].AllNotes)
                     {
                         fretsPressed += 1 << note.Fret;
                     }
@@ -168,7 +168,7 @@ namespace YARG.Integration
                 {
                     int padsHit = 0;
 
-                    foreach (var note in _drums.Notes[_drumIndex].ChordEnumerator())
+                    foreach (var note in _drums.Notes[_drumIndex].AllNotes)
                     {
                         padsHit += 1 << note.Pad;
                     }
@@ -229,23 +229,23 @@ namespace YARG.Integration
             {
                 switch (Venue.Lighting[LightingIndex].Type)
                 {
-                    case LightingType.Strobe_Off:
+                    case LightingType.StrobeOff:
                         MasterLightingController.CurrentStrobeState = StageKitStrobeSpeed.Off;
                         break;
 
-                    case LightingType.Strobe_Fast:
+                    case LightingType.StrobeFast:
                         MasterLightingController.CurrentStrobeState = StageKitStrobeSpeed.Fast;
                         break;
 
-                    case LightingType.Strobe_Medium:
+                    case LightingType.StrobeMedium:
                         MasterLightingController.CurrentStrobeState = StageKitStrobeSpeed.Medium;
                         break;
 
-                    case LightingType.Strobe_Slow:
+                    case LightingType.StrobeSlow:
                         MasterLightingController.CurrentStrobeState = StageKitStrobeSpeed.Slow;
                         break;
 
-                    case LightingType.Strobe_Fastest:
+                    case LightingType.StrobeFastest:
                         MasterLightingController.CurrentStrobeState = StageKitStrobeSpeed.Fastest;
                         break;
 

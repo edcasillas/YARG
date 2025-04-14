@@ -74,12 +74,12 @@ namespace YARG.Audio.BASS
         protected override void FadeIn_Internal(double maxVolume, double duration)
         {
             float scaled = (float) BassAudioManager.ExponentialVolume(maxVolume);
-            Bass.ChannelSlideAttribute(_mixerHandle, ChannelAttribute.Volume, scaled, (int) (duration * SongEntry.MILLISECOND_FACTOR));
+            Bass.ChannelSlideAttribute(_mixerHandle, ChannelAttribute.Volume, scaled, (int) (duration * SongMetadata.MILLISECOND_FACTOR));
         }
 
         protected override void FadeOut_Internal(double duration)
         {
-            Bass.ChannelSlideAttribute(_mixerHandle, ChannelAttribute.Volume, 0, (int) (duration * SongEntry.MILLISECOND_FACTOR));
+            Bass.ChannelSlideAttribute(_mixerHandle, ChannelAttribute.Volume, 0, (int) (duration * SongMetadata.MILLISECOND_FACTOR));
         }
 
         protected override int Pause_Internal()
@@ -177,9 +177,46 @@ namespace YARG.Audio.BASS
             }
         }
 
-        protected override int GetData_Internal(float[] buffer)
+        protected override int GetFFTData_Internal(float[] buffer, int fftSize, bool complex)
         {
-            int data = Bass.ChannelGetData(_mixerHandle, buffer, (int) (DataFlags.FFT256));
+            int flags = 0;
+            switch (1 << fftSize)
+            {
+                case 256:
+                    flags |= (int) DataFlags.FFT256;
+                    break;
+                case 512:
+                    flags |= (int) DataFlags.FFT512;
+                    break;
+                case 1024:
+                    flags |= (int) DataFlags.FFT1024;
+                    break;
+                case 2048:
+                    flags |= (int) DataFlags.FFT2048;
+                    break;
+                case 4096:
+                    flags |= (int) DataFlags.FFT4096;
+                    break;
+                default:
+                    return -1;
+            }
+
+            if (complex)
+            {
+                flags |= (int) DataFlags.FFTComplex;
+            }
+
+            int data = Bass.ChannelGetData(_mixerHandle, buffer, flags);
+            if (data < 0)
+            {
+                return (int) Bass.LastError;
+            }
+            return data;
+        }
+
+        protected override int GetSampleData_Internal(float[] buffer)
+        {
+            int data = Bass.ChannelGetData(_mixerHandle, buffer, (buffer.Length * 4) | (int) (DataFlags.Float));
             if (data < 0)
             {
                 return (int) Bass.LastError;
@@ -325,7 +362,7 @@ namespace YARG.Audio.BASS
         {
             if (_channels.Count == 0)
             {
-                _mainHandle.Dispose();
+                _mainHandle?.Dispose();
                 return;
             }
 
