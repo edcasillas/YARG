@@ -1,6 +1,6 @@
 [submodule "Assets/Plugins/YARG.Core"]
 	path = YARG.Core
-	url = https://github.com/YARC-Official/YARG.Core
+	url = https://github.com/edcasillas/YARG.Core.git
 [submodule "Packages/KeijiroMinis"]
 	path = Packages/KeijiroMinis
 	url = https://github.com/edcasillas/KeijiroMinis.git
