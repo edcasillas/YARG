@@ -35,6 +35,13 @@ namespace YARG.Menu.Main
             _cameraContainer.transform.position = Vector3.Lerp(_cameraContainer.transform.position,
                 new Vector3(0, 0.5f, 0), Time.deltaTime * 1.5f);
 
+            if (Mouse.current == null)
+            {
+                // This might happen on mobile devices with no mouse support.
+                // The code below will need a workaround to use touch input.
+                return;
+            }
+
             // Get the mouse position
             var mousePos = Mouse.current.position.ReadValue();
             mousePos = _camera.ScreenToViewportPoint(mousePos);
