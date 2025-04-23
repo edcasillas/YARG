@@ -53,6 +53,7 @@ namespace YARG.Helpers
         /// </summary>
         public static Resolution GetScreenResolution()
         {
+#if UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX || UNITY_STANDALONE_LINUX
             var screenInfo = Screen.mainWindowDisplayInfo;
             return new Resolution()
             {
@@ -60,6 +61,9 @@ namespace YARG.Helpers
                 height = screenInfo.height,
                 refreshRate = (int) Math.Round(screenInfo.refreshRate.value),
             };
+#else
+            return Screen.currentResolution;
+#endif
         }
 
         /// <summary>

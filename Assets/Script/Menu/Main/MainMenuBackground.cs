@@ -12,11 +12,25 @@ namespace YARG.Menu.Main
 
         private void Start()
         {
+            Debug.Log($"[MainMenuBackground] GameObject: {gameObject.name}, _camera: {_camera}, _cameraContainer: {_cameraContainer}");
+
+            if (!_camera || !_cameraContainer)
+            {
+                Debug.LogError("[MainMenuBackground] One or more serialized fields are null at runtime!");
+                return;
+            }
+
             _cameraContainer.transform.position = new Vector3(0, 2f, 0);
         }
 
         private void Update()
         {
+            if (!_camera || !_cameraContainer)
+            {
+                Debug.LogError("[MainMenuBackground] One or more serialized fields are null at runtime!");
+                return;
+            }
+
             // Move the camera container down
             _cameraContainer.transform.position = Vector3.Lerp(_cameraContainer.transform.position,
                 new Vector3(0, 0.5f, 0), Time.deltaTime * 1.5f);
