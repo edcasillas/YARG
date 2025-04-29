@@ -829,7 +829,8 @@ PlayerSettings:
   webGLThreadsSupport: 0
   webGLDecompressionFallback: 0
   webGLPowerPreference: 2
-  scriptingDefineSymbols: {}
+  scriptingDefineSymbols:
+    Android: USE_SQLITEPCL_RAW
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:
