@@ -35,6 +35,8 @@ namespace YARG.Gameplay.HUD
         /// <param name="progress">A value from 0 to 1 inclusive.</param>
         public void SetProgress(float progress)
         {
+            if(!progressMask) return;
+
             progress = Mathf.Clamp01(progress);
             float mW = useCustomPosition ? customPosition : progressMask.rect.width;
             float iW = progressImg.rect.width;
