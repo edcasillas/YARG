@@ -99,10 +99,14 @@ namespace YARG.Audio.BASS
         public BassAudioManager()
         {
             YargLogger.LogInfo("Initializing BASS...");
+#if UNITY_ANDROID
+            _opusHandle = Bass.PluginLoad("libbassopus.so");
+#else
             string bassPath = GetBassDirectory();
             string opusLibDirectory = Path.Combine(bassPath, "bassopus");
-
+            YargLogger.LogFormatInfo("opusLibDirectory: {0}", opusLibDirectory);
             _opusHandle = Bass.PluginLoad(opusLibDirectory);
+#endif
             if (_opusHandle == 0) YargLogger.LogFormatError("Failed to load .opus plugin: {0}!", Bass.LastError);
 
             Bass.Configure(Configuration.IncludeDefaultDevice, true);
