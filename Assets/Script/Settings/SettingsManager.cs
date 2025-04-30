@@ -224,17 +224,26 @@ namespace YARG.Settings
 
         private static string SettingsFile => Path.Combine(PathHelper.PersistentDataPath, "settings.json");
 
+        /// <summary>
+        /// Create settings container
+        /// </summary>
         public static void LoadSettings()
         {
-            // Create settings container
-            try
+            if (File.Exists(SettingsFile))
             {
-                string text = File.ReadAllText(SettingsFile);
-                Settings = JsonConvert.DeserializeObject<SettingContainer>(text, JsonSettings);
+                try
+                {
+                    string text = File.ReadAllText(SettingsFile);
+                    Settings = JsonConvert.DeserializeObject<SettingContainer>(text, JsonSettings);
+                }
+                catch (Exception e)
+                {
+                    YargLogger.LogException(e, $"Failed to load settings from {SettingsFile}");
+                }
             }
-            catch (Exception e)
+            else
             {
-                YargLogger.LogException(e, "Failed to load settings!");
+                YargLogger.LogInfo("Settings file does not exist. One will be created.");
             }
 
             // If null, recreate
@@ -260,10 +269,22 @@ namespace YARG.Settings
         {
             // If the game tries to save the settings before they are loaded, it can wipe the settings file
             // (such as closing the game before they load)
-            if (SettingContainer.IsInitialized && Settings is not null)
+            if (!SettingContainer.IsInitialized || Settings is null)
             {
-                var json = JsonConvert.SerializeObject(Settings, JsonSettings);
+                return;
+            }
+
+            YargLogger.LogInfo("Saving settings");
+
+            var json = JsonConvert.SerializeObject(Settings, JsonSettings);
+
+            try
+            {
                 File.WriteAllText(SettingsFile, json);
+            }
+            catch (Exception e)
+            {
+                YargLogger.LogException(e, $"Failed to save settings to {SettingsFile}");
             }
         }
 
