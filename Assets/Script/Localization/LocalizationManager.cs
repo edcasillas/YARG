@@ -38,31 +38,29 @@ namespace YARG.Localization
         public static async UniTask LoadLanguage(LoadingContext loadingContext)
         {
             loadingContext.SetLoadingText("Loading language...");
-            await UniTask.RunOnThreadPool(() =>
-            {
-                // Attempt to load the selected language
-                if (!TryParseAndLoadLanguage(CultureCode))
-                {
-                    if (CultureCode != DEFAULT_CULTURE)
-                    {
-                        // If that fails for whatever reason, load the default one instead
-                        YargLogger.LogError("Failed to parse and load language! Falling back to default.");
 
-                        CultureCode = DEFAULT_CULTURE;
-                        if (!TryParseAndLoadLanguage(CultureCode))
-                        {
-                            YargLogger.LogError("Failed to parse and load default language!");
-                        }
-                    }
-                    else
+            // Attempt to load the selected language
+            if (!await TryParseAndLoadLanguageAsync(CultureCode))
+            {
+                if (CultureCode != DEFAULT_CULTURE)
+                {
+                    // If that fails for whatever reason, load the default one instead
+                    YargLogger.LogError("Failed to parse and load language! Falling back to default.");
+
+                    CultureCode = DEFAULT_CULTURE;
+                    if (!await TryParseAndLoadLanguageAsync(CultureCode))
                     {
-                        YargLogger.LogError("Failed to parse and load the default language! (no fallback)");
+                        YargLogger.LogError("Failed to parse and load default language!");
                     }
                 }
-            });
+                else
+                {
+                    YargLogger.LogError("Failed to parse and load the default language! (no fallback)");
+                }
+            }
         }
 
-        private static bool TryParseAndLoadLanguage(string cultureCode)
+        private static async UniTask<bool> TryParseAndLoadLanguageAsync(string cultureCode)
         {
             YargLogger.LogFormatInfo("Loading language `{0}`...", cultureCode);
 
@@ -70,14 +68,14 @@ namespace YARG.Localization
             {
                 _localizationMap.Clear();
 
-                ParseAndLoadLanguage(cultureCode);
+                await ParseAndLoadLanguageAsync(cultureCode);
 
                 // Also combine the keys of the default culture. The default culture is guaranteed to be
                 // the most up to date as that is the one attached to the repo. The other languages are
                 // fetched periodically from Crowdin which means there may be some desync.
                 if (cultureCode != DEFAULT_CULTURE)
                 {
-                    ParseAndLoadLanguage(DEFAULT_CULTURE);
+                    await ParseAndLoadLanguageAsync(DEFAULT_CULTURE);
                 }
             }
             catch (Exception e)
@@ -89,7 +87,7 @@ namespace YARG.Localization
             return true;
         }
 
-        private static void ParseAndLoadLanguage(string cultureCode)
+        private static async UniTask ParseAndLoadLanguageAsync(string cultureCode)
         {
             // Get the path of the localization file
             var file = Path.Combine(PathHelper.StreamingAssetsPath, "lang", $"{cultureCode}.json");
@@ -99,7 +97,7 @@ namespace YARG.Localization
             }
 
             // Read, parse, and scan for localization keys
-            var json = File.ReadAllText(file);
+            var json = await File.ReadAllTextAsync(file);
             var obj = JObject.Parse(json);
             ParseObjectRecursive(null, obj);
         }
