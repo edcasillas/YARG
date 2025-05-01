@@ -119,6 +119,9 @@ namespace YARG.Song
         // The editor does not track the contents of folders that end in ~,
         // so use this to prevent Unity from stalling due to importing freshly-downloaded sources
         public static readonly string SourcesFolder = Path.Combine(PathHelper.StreamingAssetsPath, "sources~");
+#elif UNITY_ANDROID
+        // On Android StreamingAssets is not writable, so trying to download sources will fail on it. Instead, we use the PersistentData folder.
+        public static readonly string SourcesFolder = Path.Combine(PathHelper.PersistentDataPath, "sources");
 #else
         public static readonly string SourcesFolder = Path.Combine(PathHelper.StreamingAssetsPath, "sources");
 #endif
@@ -173,6 +176,7 @@ namespace YARG.Song
 
         private static async UniTask DownloadSources(LoadingContext context)
         {
+            YargLogger.LogFormatInfo("Downloading sources to {0}", SourcesFolder);
             context.SetLoadingText("Loading song sources...");
 
             // Create the sources folder if it doesn't exist

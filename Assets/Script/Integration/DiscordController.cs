@@ -44,6 +44,11 @@ namespace YARG.Integration
 
         public void Initialize()
         {
+#if UNITY_ANDROID
+            YargLogger.LogInfo("Discord is disabled on Android. Initialization skipped.");
+            enabled = false;
+#else
+
             // Listen to the changing of states
             GameStateFetcher.GameStateChange += OnGameStateChange;
 
@@ -65,6 +70,8 @@ namespace YARG.Integration
 
             // Set default activity
             SetDefaultActivity();
+
+#endif
         }
 
         private void OnGameStateChange(GameStateFetcher.State state)
