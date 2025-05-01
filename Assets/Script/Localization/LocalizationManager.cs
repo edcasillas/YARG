@@ -87,20 +87,45 @@ namespace YARG.Localization
             return true;
         }
 
+        /// <summary>
+        /// Read, parse, and scan for localization keys
+        /// </summary>
         private static async UniTask ParseAndLoadLanguageAsync(string cultureCode)
         {
-            // Get the path of the localization file
-            var file = Path.Combine(PathHelper.StreamingAssetsPath, "lang", $"{cultureCode}.json");
-            if (!File.Exists(file))
-            {
-                throw new Exception($"The language file for the specified culture ({cultureCode}) does not exist!");
-            }
-
-            // Read, parse, and scan for localization keys
-            var json = await File.ReadAllTextAsync(file);
+            var json = await ReadLanguageFileAsync(cultureCode);
             var obj = JObject.Parse(json);
             ParseObjectRecursive(null, obj);
         }
+
+        private static async UniTask<string> ReadLanguageFileAsync(string cultureCode)
+        {
+            // Get the path of the localization file
+            var path = Path.Combine(PathHelper.StreamingAssetsPath, "lang", $"{cultureCode}.json");
+            YargLogger.LogFormatInfo("Loading language file `{0}`...", path);
+            string result = null;
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+            // Per Unity docs: On Android and WebGL platforms, it’s not possible to access the streaming asset files directly via file system APIs and streamingAssets path because these platforms return a URL.
+            var request = UnityEngine.Networking.UnityWebRequest.Get(path);
+            request.disposeDownloadHandlerOnDispose = true;
+            await request.SendWebRequest();
+            if (request.result != UnityEngine.Networking.UnityWebRequest.Result.Success)
+            {
+                throw new Exception($"Failed to load language file at {path}: {request.error}");
+            }
+            result = request.downloadHandler.text;
+#else
+            if (!File.Exists(path))
+            {
+                throw new Exception($"The language file for the specified culture ({cultureCode}) does not exist!");
+            }
+            result = await File.ReadAllTextAsync(path);
+#endif
+
+            result.TrimStart('\uFEFF'); // remove BOM if present.
+            return result;
+        }
+
 
         private static void ParseObjectRecursive(string parentKey, JObject obj)
         {
